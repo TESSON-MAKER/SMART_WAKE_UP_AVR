@@ -7,8 +7,8 @@ const int NumBTN = sizeof(BTN) / sizeof(BTN[0]);
 int lastButtonState[NumBTN] = {LOW}; // Tableau pour stocker l'etat precedent de chaque bouton
 const int debounceDelay = 50;        // Delai en millisecondes pour le temps de rebond
 
-
 ////////////////////////////////////////SETUP////////////////////////////////////////////
+
 void setup()
 {
   for (int i = 0; i < NumLED; i++)
@@ -46,7 +46,6 @@ void loop()
 }
 
 ////////////////////////////////////////Fonctions////////////////////////////////////////
-
 
 /*---------------------------------------Clic---------------------------------------*/
 
