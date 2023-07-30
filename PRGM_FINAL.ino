@@ -35,7 +35,7 @@ int year;
 int dayWeek;
 
 bool keyState = false;
-bool x = false;
+bool update = false;
 int move = 0;
 
 ////////////////////////////////////////SETUP////////////////////////////////////////////
@@ -131,7 +131,7 @@ void findDate()
 void displayDate()
 {
   findDate();
-  x = false;
+  update = false;
   move = 0;
     
   u8g2.setCursor(0, 10);
@@ -197,7 +197,7 @@ void setting()
   
   if (clic(4))
   {
-    x = true;
+    update = true;
     Wire.beginTransmission(DS3231_I2C_ADDRESS);
     Wire.write(0);
     Wire.write(decToBcd(second));
@@ -210,7 +210,7 @@ void setting()
     Wire.endTransmission();
   }
 
-  if (x == true)
+  if (update == true)
   {
     u8g2.setCursor(0, 25);                // Positionne le curseur a la position (0, 25)
     u8g2.print("Mis a jour");
@@ -242,8 +242,8 @@ void ledOFF(int num)
 /*------------------------Implementation des donnees--------------------------------*/
 void handling(int& data, const char* title, int max, int min)
 {
-  if (clic(2)) data++;
-  if (clic(3)) data--;
+  if (clic(2)) {data++; update=false;}
+  if (clic(3)) {data--; update=false;}
   if (data>max) data=min;
   if (data<min) data=max;
   u8g2.setCursor(0, 10);  // Positionne le curseur a la position (0, 10)
@@ -260,8 +260,8 @@ void handlingDay()
 {
   bool isLeapYear = (year %4 == 0 && year %100 != 0) || (year %400 == 0);
 
-  if (clic(2)) day++;
-  if (clic(3)) day--;
+  if (clic(2)) {day++; update=false;}
+  if (clic(3)) {day--; update=false;}
   if ((month == 4 || month == 6 || month == 9 || month == 11) && (day > 30)) day=0;
   if ((month == 4 || month == 6 || month == 9 || month == 11) && (day < 0)) day=30;
   if ((month == 1 || month == 3 || month == 5 || month == 7 || month == 9 || month == 11) && (day > 31)) day=0;
@@ -287,8 +287,8 @@ void handlingMonth()
 {
   bool isLeapYear = (year %4 == 0 && year %100 != 0) || (year %400 == 0);
 
-  if (clic(2)) month++;
-  if (clic(3)) month--;
+  if (clic(2)) {month++; update=false;}
+  if (clic(3)) {month--; update=false;}
   if (month>12) month=1;
   if (month<1) month=12;
 
@@ -313,8 +313,8 @@ void handlingYear()
 {
   bool isLeapYear = (year %4 == 0 && year %100 != 0) || (year %400 == 0);
 
-  if (clic(2)) year++;
-  if (clic(3)) year--;
+  if (clic(2)) {year++; update=false;}
+  if (clic(3)) {year++; update=false;}
   if (year>99) year=0;
   if (year<0) year=99;
 
