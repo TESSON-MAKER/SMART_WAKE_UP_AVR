@@ -24,6 +24,7 @@ const int NumBTN = sizeof(BTN) / sizeof(BTN[0]);
 const int TMP = A0;
 
 int lastButtonState[NumBTN] = {LOW};    // Tableau pour stocker l'etat precedent de chaque bouton
+unsigned long lastDebounceTime[NumBTN] = {0}; // Tableau pour stocker le dernier temps de rebond de chaque bouton
 const int debounceDelay = 50;           // Delai en millisecondes pour le temps de rebond
 
 int hour;
@@ -37,6 +38,7 @@ int dayWeek;
 bool keyState = false;
 bool update = false;
 int move = 0;
+
 
 ////////////////////////////////////////SETUP////////////////////////////////////////////
 void setup()
@@ -96,16 +98,23 @@ byte bcdToDec(byte val) { return ((val / 16 * 10) + (val % 16)); }
 bool clic(int num)
 {
   int buttonState = digitalRead(BTN[num]);    // Lecture de l'etat du bouton correspondant au numero
+  unsigned long currentTime = millis();       // Temps actuel
+  
   if (buttonState != lastButtonState[num])
   {
-    delay(debounceDelay);                     // Delai de rebond pour eviter les faux declenchements
-    buttonState = digitalRead(BTN[num]);      // Lecture de l'etat du bouton a nouveau
-    if (buttonState == HIGH)
+    lastDebounceTime[num] = currentTime;      // Réinitialiser le délai de rebond pour ce bouton
+  }
+
+  if (currentTime - lastDebounceTime[num] > debounceDelay)
+  {
+    
+    if (buttonState == HIGH)                  // Assez de temps s'est écoulé depuis le dernier changement d'état du bouton, on peut considérer l'état actuel comme valable
     {
       lastButtonState[num] = buttonState;     // Met a jour l'etat precedent du bouton
       return true;                            // Renvoie vrai si le bouton est presse
     }
   }
+
   lastButtonState[num] = buttonState;         // Met a jour l'etat precedent du bouton
   return false;                               // Renvoie faux si le bouton n'est pas presse
 }
