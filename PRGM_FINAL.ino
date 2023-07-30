@@ -97,28 +97,21 @@ byte bcdToDec(byte val) { return ((val / 16 * 10) + (val % 16)); }
 /*---------------------------------------Clic---------------------------------------*/
 bool clic(int num)
 {
-  int buttonState = digitalRead(BTN[num]);    // Lecture de l'etat du bouton correspondant au numero
-  unsigned long currentTime = millis();       // Temps actuel
-  
+  int buttonState = digitalRead(BTN[num]);  // Lecture de l'état du bouton correspondant au numéro
   if (buttonState != lastButtonState[num])
   {
-    lastDebounceTime[num] = currentTime;      // Réinitialiser le délai de rebond pour ce bouton
-  }
-
-  if (currentTime - lastDebounceTime[num] > debounceDelay)
-  {
-    
-    if (buttonState == HIGH)                  // Assez de temps s'est écoulé depuis le dernier changement d'état du bouton, on peut considérer l'état actuel comme valable
+    delay(debounceDelay);                   // Délai de rebond pour éviter les faux déclenchements
+    buttonState = digitalRead(BTN[num]);    // Lecture de l'état du bouton à nouveau
+    if (buttonState == HIGH)
     {
-      lastButtonState[num] = buttonState;     // Met a jour l'etat precedent du bouton
-      return true;                            // Renvoie vrai si le bouton est presse
+      lastButtonState[num] = buttonState;   // Met à jour l'état précédent du bouton
+      return true;                          // Renvoie vrai si le bouton est pressé
     }
   }
+  lastButtonState[num] = buttonState;       // Met à jour l'état précédent du bouton
+  return false;                             // Renvoie faux si le bouton n'est pas pressé
 
-  lastButtonState[num] = buttonState;         // Met a jour l'etat precedent du bouton
-  return false;                               // Renvoie faux si le bouton n'est pas presse
 }
-
 /*---------------------------------------Trouver la date----------------------------*/
 void findDate()
 {
