@@ -95,25 +95,24 @@ byte decToBcd(byte val) { return ((val / 10 * 16) + (val % 10)); }
 byte bcdToDec(byte val) { return ((val / 16 * 10) + (val % 16)); }
 
 /*---------------------------------------Clic---------------------------------------*/
-bool clic(int num)
+bool clic(int num) 
 {
-  int buttonState = digitalRead(BTN[num]);  // Lecture de l'état du bouton correspondant au numéro
-  if (buttonState != lastButtonState[num])
+  int buttonState = digitalRead(BTN[num]);  // Lecture de l'etat du bouton correspondant au numero
+  if (buttonState != lastButtonState[num]) 
   {
-    delay(debounceDelay);                   // Délai de rebond pour éviter les faux déclenchements
-    buttonState = digitalRead(BTN[num]);    // Lecture de l'état du bouton à nouveau
-    if (buttonState == HIGH)
+    lastDebounceTime[num] = millis(); // Enregistre le temps de rebond
+    if (buttonState == HIGH) 
     {
-      lastButtonState[num] = buttonState;   // Met à jour l'état précédent du bouton
-      return true;                          // Renvoie vrai si le bouton est pressé
+      lastButtonState[num] = buttonState;   // Met a jour l'etat precedent du bouton
+      return true;                          // Renvoie vrai si le bouton est presse
     }
   }
-  lastButtonState[num] = buttonState;       // Met à jour l'état précédent du bouton
-  return false;                             // Renvoie faux si le bouton n'est pas pressé
-
+  lastButtonState[num] = buttonState;       // Met a jour l'etat precedent du bouton
+  return false;                             // Renvoie faux si le bouton n'est pas presse
 }
-/*---------------------------------------Trouver la date----------------------------*/
-void findDate()
+
+/*---------------------------Afficher sur l'ecran la date et l'heure----------------*/
+void displayDate()
 {
   Wire.beginTransmission(DS3231_I2C_ADDRESS); // Demarre la communication avec le module RTC
   Wire.write(0);                              // Envoie l'adresse de depart pour lire les donnees
@@ -127,12 +126,7 @@ void findDate()
   day = bcdToDec(Wire.read());                // Jour (valeurs de 01 a 31)
   month = bcdToDec(Wire.read());              // Mois (valeurs de 01 a 12)
   year = bcdToDec(Wire.read());               // Annee (valeurs de 00 a 99)
-}
 
-/*---------------------------Afficher sur l'ecran la date et l'heure----------------*/
-void displayDate()
-{
-  findDate();
   update = false;
   move = 0;
     
@@ -249,7 +243,7 @@ void handling(int& data, const char* title, int max, int min)
   if (data>max) data=min;
   if (data<min) data=max;
   u8g2.setCursor(0, 10);  // Positionne le curseur a la position (0, 10)
-      
+
   u8g2.print("Setting ");
   u8g2.print(title);
   u8g2.print(":");
@@ -298,8 +292,8 @@ void handlingMonth()
   if ((month == 4 || month == 6 || month == 9 || month == 11) && (day > 30)) day=30;  //Cas ou dans 1 mois, il n'y a que 30 jours
   
 
-  if (month == 2 && isLeapYear && day > 29) day = 29;                                 //Cas de Fevrier dans les années bissextiles (29 jours)
-  if (month == 2 && !isLeapYear && day > 28) day = 28;                                //Cas de Fevrier hors années bissextiles (28 jours)
+  if (month == 2 && isLeapYear && day > 29) day = 29;                                 //Cas de Fevrier dans les annees bissextiles (29 jours)
+  if (month == 2 && !isLeapYear && day > 28) day = 28;                                //Cas de Fevrier hors annees bissextiles (28 jours)
 
   u8g2.setCursor(0, 10);                                                              // Positionne le curseur a la position (0, 10)
       
@@ -320,8 +314,8 @@ void handlingYear()
   if (year>99) year=0;
   if (year<0) year=99;
 
-  if (month == 2 && isLeapYear && day > 29) day = 29;           // Cas de Fevrier dans les années bissextiles (29 jours)
-  if (month == 2 && !isLeapYear && day > 28) day = 28;          // Cas de Fevrier hors années bissextiles (28 jours)
+  if (month == 2 && isLeapYear && day > 29) day = 29;           // Cas de Fevrier dans les annees bissextiles (29 jours)
+  if (month == 2 && !isLeapYear && day > 28) day = 28;          // Cas de Fevrier hors annees bissextiles (28 jours)
 
   u8g2.setCursor(0, 10);                                        // Positionne le curseur a la position (0, 10)
       
