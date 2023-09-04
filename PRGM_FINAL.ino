@@ -26,6 +26,8 @@ const int TMP = A0;
 int lastButtonState[NumBTN] = {LOW};    // Tableau pour stocker l'etat precedent de chaque bouton
 unsigned long lastDebounceTime[NumBTN] = {0}; // Tableau pour stocker le dernier temps de rebond de chaque bouton
 const int debounceDelay = 50;           // Delai en millisecondes pour le temps de rebond
+unsigned long buttonPressTime[NumBTN] = {0}; // Tableau pour stocker le temps de pression de chaque bouton
+unsigned long delayStart = 0; // Déclaration de la variable globale
 
 int hour;
 int minute;
@@ -85,7 +87,6 @@ void loop()
   }
 
   u8g2.sendBuffer();
-  delay(10);                  // Delai pour eviter de rafraichir l'affichage trop frequemment
 }
 
 ////////////////////////////////////////Fonctions////////////////////////////////////////
@@ -97,18 +98,34 @@ byte bcdToDec(byte val) { return ((val / 16 * 10) + (val % 16)); }
 /*---------------------------------------Clic---------------------------------------*/
 bool clic(int num) 
 {
-  int buttonState = digitalRead(BTN[num]);  // Lecture de l'etat du bouton correspondant au numero
+  int buttonState = digitalRead(BTN[num]);  // Lecture de l'état du bouton correspondant au numéro
+
   if (buttonState != lastButtonState[num]) 
   {
     lastDebounceTime[num] = millis(); // Enregistre le temps de rebond
     if (buttonState == HIGH) 
     {
-      lastButtonState[num] = buttonState;   // Met a jour l'etat precedent du bouton
-      return true;                          // Renvoie vrai si le bouton est presse
+      lastButtonState[num] = buttonState;   // Met à jour l'état précédent du bouton
+      buttonPressTime[num] = millis(); // Enregistre le temps de la pression du bouton
+
+      return true; // Renvoie vrai si le bouton est pressé
     }
   }
-  lastButtonState[num] = buttonState;       // Met a jour l'etat precedent du bouton
-  return false;                             // Renvoie faux si le bouton n'est pas presse
+  else if (buttonState == HIGH && (millis() - buttonPressTime[num]) >= 1000)
+  {
+    // Si le bouton est maintenu enfoncé pendant plus d'une seconde, effectuer des incréments de 1
+    lastButtonState[num] = buttonState; // Met à jour l'état précédent du bouton
+    
+    static unsigned long lastDelayTime = 0;
+    if ((millis() - lastDelayTime) >= 200)
+    {
+      lastDelayTime = millis();
+      return true;
+    }
+  }
+
+  lastButtonState[num] = buttonState; // Met à jour l'état précédent du bouton
+  return false; // Renvoie faux si le bouton n'est pas pressé
 }
 
 /*---------------------------Afficher sur l'ecran la date et l'heure----------------*/
