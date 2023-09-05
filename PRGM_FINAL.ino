@@ -23,11 +23,10 @@ const int NumBTN = sizeof(BTN) / sizeof(BTN[0]);
 
 const int TMP = A0;
 
-int lastButtonState[NumBTN] = {LOW};    // Tableau pour stocker l'etat precedent de chaque bouton
+int lastButtonState[NumBTN] = {LOW};          // Tableau pour stocker l'etat precedent de chaque bouton
 unsigned long lastDebounceTime[NumBTN] = {0}; // Tableau pour stocker le dernier temps de rebond de chaque bouton
-const int debounceDelay = 50;           // Delai en millisecondes pour le temps de rebond
-unsigned long buttonPressTime[NumBTN] = {0}; // Tableau pour stocker le temps de pression de chaque bouton
-unsigned long delayStart = 0; // Déclaration de la variable globale
+unsigned long buttonPressTime[NumBTN] = {0};  // Tableau pour stocker le temps de pression de chaque bouton
+unsigned long delayStart = 0;                 // Déclaration de la variable globale
 
 int hour;
 int minute;
@@ -78,11 +77,19 @@ void loop()
   {
     case false:
       displayDate();          // Affiche la date et l'heure sur l'ecran
-      displaySensorTMP(100);
+      displaySensorTMP(10);
+      ledOFF(0);
+      ledOFF(1);
+      ledOFF(2);
+      ledOFF(3);
       break;
 
     case true:
-      setting(); 
+      setting();
+      ledON(0); 
+      ledON(1); 
+      ledON(2); 
+      ledON(3); 
       break;
   }
 
@@ -95,26 +102,47 @@ void loop()
 byte decToBcd(byte val) { return ((val / 10 * 16) + (val % 10)); }
 byte bcdToDec(byte val) { return ((val / 16 * 10) + (val % 16)); }
 
+
 /*---------------------------------------Clic---------------------------------------*/
 bool clic(int num) 
 {
-  int buttonState = digitalRead(BTN[num]);  // Lecture de l'état du bouton correspondant au numéro
+  int buttonState = digitalRead(BTN[num]);    // Lecture de l'état du bouton correspondant au numéro
 
   if (buttonState != lastButtonState[num]) 
   {
-    lastDebounceTime[num] = millis(); // Enregistre le temps de rebond
+    lastDebounceTime[num] = millis();         // Enregistre le temps de rebond
+    
     if (buttonState == HIGH) 
     {
-      lastButtonState[num] = buttonState;   // Met à jour l'état précédent du bouton
-      buttonPressTime[num] = millis(); // Enregistre le temps de la pression du bouton
-
-      return true; // Renvoie vrai si le bouton est pressé
+      lastButtonState[num] = buttonState;     // Met à jour l'état précédent du bouton
+      return true;                            // Renvoie vrai si le bouton est pressé
     }
   }
-  else if (buttonState == HIGH && (millis() - buttonPressTime[num]) >= 1000)
+
+  lastButtonState[num] = buttonState;         // Met à jour l'état précédent du bouton
+  return false;                               // Renvoie faux si le bouton n'est pas pressé
+}
+
+/*---------------------------------------Long_Clic----------------------------------*/
+bool longClic(int num) 
+{
+  int buttonState = digitalRead(BTN[num]);    // Lecture de l'état du bouton correspondant au numéro
+
+  if (buttonState != lastButtonState[num]) 
   {
-    // Si le bouton est maintenu enfoncé pendant plus d'une seconde, effectuer des incréments de 1
-    lastButtonState[num] = buttonState; // Met à jour l'état précédent du bouton
+    lastDebounceTime[num] = millis();         // Enregistre le temps de rebond
+    
+    if (buttonState == HIGH) 
+    {
+      lastButtonState[num] = buttonState;     // Met à jour l'état précédent du bouton
+      buttonPressTime[num] = millis();        // Enregistre le temps de la pression du bouton
+      return true;                            // Renvoie vrai si le bouton est pressé
+    }
+  }
+  else if (buttonState == HIGH && (millis() - buttonPressTime[num]) >= 1000)  // Si le bouton est maintenu enfoncé pendant plus d'une seconde, effectuer des incréments de 1
+  {
+    
+    lastButtonState[num] = buttonState;       // Met à jour l'état précédent du bouton
     
     static unsigned long lastDelayTime = 0;
     if ((millis() - lastDelayTime) >= 200)
@@ -124,8 +152,8 @@ bool clic(int num)
     }
   }
 
-  lastButtonState[num] = buttonState; // Met à jour l'état précédent du bouton
-  return false; // Renvoie faux si le bouton n'est pas pressé
+  lastButtonState[num] = buttonState;         // Met à jour l'état précédent du bouton
+  return false;                               // Renvoie faux si le bouton n'est pas pressé
 }
 
 /*---------------------------Afficher sur l'ecran la date et l'heure----------------*/
@@ -230,33 +258,23 @@ void setting()
   }
 }
 
-/*--------------------------Allumage progressif de la LED---------------------------*/
+/*------------------------------Allumage progressif de la LED-----------------------*/
 void ledON(int num)
 {
-  // Augmenter progressivement la luminosite
-  for (int power = 0; power <= 255; power++)
-  {
-    analogWrite(LED[num], power);
-    delay(5); // Reglage de la vitesse d'allumage progressif (plus la valeur est basse, plus c'est rapide)
-  }
+  digitalWrite(LED[num], HIGH);
 }
 
-/*------------------------Extinction progressive de la LED--------------------------*/
+/*------------------------------Eteinte progressive de la LED-----------------------*/
 void ledOFF(int num)
 {
-  // Diminuer progressivement la luminosite
-  for (int power = 255; power >= 0; power--)
-  {
-    analogWrite(LED[num], power);
-    delay(5); // Reglage de la vitesse d'extinction progressive (plus la valeur est basse, plus c'est rapide)
-  }
+  digitalWrite(LED[num], LOW);
 }
 
 /*------------------------Implementation des donnees--------------------------------*/
 void handling(int& data, const char* title, int max, int min)
 {
-  if (clic(2)) {data++; update=false;}
-  if (clic(3)) {data--; update=false;}
+  if (longClic(2)) {data++; update=false;}
+  if (longClic(3)) {data--; update=false;}
   if (data>max) data=min;
   if (data<min) data=max;
   u8g2.setCursor(0, 10);  // Positionne le curseur a la position (0, 10)
@@ -273,8 +291,8 @@ void handlingDay()
 {
   bool isLeapYear = (year %4 == 0 && year %100 != 0) || (year %400 == 0);
 
-  if (clic(2)) {day++; update=false;}
-  if (clic(3)) {day--; update=false;}
+  if (longClic(2)) {day++; update=false;}
+  if (longClic(3)) {day--; update=false;}
   if ((month == 4 || month == 6 || month == 9 || month == 11) && (day > 30)) day=0;
   if ((month == 4 || month == 6 || month == 9 || month == 11) && (day < 0)) day=30;
   if ((month == 1 || month == 3 || month == 5 || month == 7 || month == 9 || month == 11) && (day > 31)) day=0;
@@ -300,8 +318,8 @@ void handlingMonth()
 {
   bool isLeapYear = (year %4 == 0 && year %100 != 0) || (year %400 == 0);
 
-  if (clic(2)) {month++; update=false;}
-  if (clic(3)) {month--; update=false;}
+  if (longClic(2)) {month++; update=false;}
+  if (longClic(3)) {month--; update=false;}
   if (month>12) month=1;
   if (month<1) month=12;
 
@@ -326,8 +344,8 @@ void handlingYear()
 {
   bool isLeapYear = (year %4 == 0 && year %100 != 0) || (year %400 == 0);
 
-  if (clic(2)) {year++; update=false;}
-  if (clic(3)) {year++; update=false;}
+  if (longClic(2)) {year++; update=false;}
+  if (longClic(3)) {year++; update=false;}
   if (year>99) year=0;
   if (year<0) year=99;
 
