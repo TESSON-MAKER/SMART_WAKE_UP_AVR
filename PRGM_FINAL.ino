@@ -35,15 +35,34 @@ int day;
 int month;
 int year;
 int dayWeek;
+int minuteUP = 0;
+int hourUP = 0;
 
 bool keyState = false;
 bool update = false;
 int move = 0;
 
+bool UP = false;
+bool alarm = false;
+
+//URM37
+int URECHO = 8;         // PWM Output 0-50000US,Every 50US represent 1cm
+int URTRIG = 9;         // trigger pin
+int BUZZER = 12;        // Buzzer Pin
+
+unsigned int DistanceMeasured = 0;
 
 ////////////////////////////////////////SETUP////////////////////////////////////////////
 void setup()
 {
+  Serial.begin(9600);
+  
+  Wire.begin();                         // Initialise la communication I2C
+
+  u8g2.begin();                         // Initialise l'affichage
+  u8g2.setFontMode(1);                  // Activation du mode de police transparente
+  u8g2.setFontDirection(0);             // Configuration de la direction de la police (0: gauche vers la droite, 1: droite vers la gauche)
+  
   for (int i = 0; i < NumLED; i++)
   {
     pinMode(LED[i], OUTPUT);            // Configure les broches des LED en sortie
@@ -58,11 +77,9 @@ void setup()
   pinMode(KEY, INPUT);
   pinMode(TMP, INPUT);
 
-  Wire.begin();                         // Initialise la communication I2C
-
-  u8g2.begin();                         // Initialise l'affichage
-  u8g2.setFontMode(1);                  // Activation du mode de police transparente
-  u8g2.setFontDirection(0);             // Configuration de la direction de la police (0: gauche vers la droite, 1: droite vers la gauche)
+  pinMode(URTRIG, OUTPUT);                   // A low pull on pin COMP/TRIG
+  digitalWrite(URTRIG, HIGH);                // Set to HIGH
+  pinMode(URECHO, INPUT);                    // Sending Enable PWM mode command
 }
 
 ////////////////////////////////////////LOOP/////////////////////////////////////////////
@@ -76,8 +93,10 @@ void loop()
   switch (keyState)
   {
     case false:
+      initialization();
       displayDate();          // Affiche la date et l'heure sur l'ecran
       displaySensorTMP(10);
+      wakeUp();
       ledOFF(0);
       ledOFF(1);
       ledOFF(2);
@@ -85,7 +104,7 @@ void loop()
       break;
 
     case true:
-      setting();
+      settings();
       ledON(0); 
       ledON(1); 
       ledON(2); 
@@ -94,6 +113,7 @@ void loop()
   }
 
   u8g2.sendBuffer();
+  delay(10);
 }
 
 ////////////////////////////////////////Fonctions////////////////////////////////////////
@@ -172,9 +192,6 @@ void displayDate()
   month = bcdToDec(Wire.read());              // Mois (valeurs de 01 a 12)
   year = bcdToDec(Wire.read());               // Annee (valeurs de 00 a 99)
 
-  update = false;
-  move = 0;
-    
   u8g2.setCursor(0, 10);
   u8g2.print("Hour: ");
   u8g2.print(hour < 10 ? "0" : "");
@@ -204,12 +221,14 @@ void displayDate()
 }
 
 /*--------------------------Ecran Reglages------------------------------------------*/
-void setting()
+void settings()
 {
+  update=true;
+
   if (clic(0)) move++;
   if (clic(1)) move--;
-  if (move > 6) move = 0;
-  if (move < 0) move = 6;
+  if (move > 9) move = 0;
+  if (move < 0) move = 9;
   
   switch (move)
   {
@@ -234,11 +253,25 @@ void setting()
     case 6:
       handlingYear();
       break;
+    case 7:
+      handling(minuteUP, "minUP", 59, 0);
+      break;
+    case 8:
+      handling(hourUP, "hourUP", 23, 0);
+      break;
+    case 9:
+      switchAlarm();
+      break;
   }
-  
-  if (clic(4))
+}
+
+/*------------------------------Mise à jour de la date et de l'heure---------------*/
+void initialization()
+{
+  move = 0;
+
+  if (update)
   {
-    update = true;
     Wire.beginTransmission(DS3231_I2C_ADDRESS);
     Wire.write(0);
     Wire.write(decToBcd(second));
@@ -249,12 +282,7 @@ void setting()
     Wire.write(decToBcd(month));
     Wire.write(decToBcd(year));
     Wire.endTransmission();
-  }
-
-  if (update == true)
-  {
-    u8g2.setCursor(0, 25);                // Positionne le curseur a la position (0, 25)
-    u8g2.print("Mis a jour");
+    update = false;
   }
 }
 
@@ -273,8 +301,8 @@ void ledOFF(int num)
 /*------------------------Implementation des donnees--------------------------------*/
 void handling(int& data, const char* title, int max, int min)
 {
-  if (longClic(2)) {data++; update=false;}
-  if (longClic(3)) {data--; update=false;}
+  if (longClic(2)) {data++;}
+  if (longClic(3)) {data--;}
   if (data>max) data=min;
   if (data<min) data=max;
   u8g2.setCursor(0, 10);  // Positionne le curseur a la position (0, 10)
@@ -291,8 +319,8 @@ void handlingDay()
 {
   bool isLeapYear = (year %4 == 0 && year %100 != 0) || (year %400 == 0);
 
-  if (longClic(2)) {day++; update=false;}
-  if (longClic(3)) {day--; update=false;}
+  if (longClic(2)) {day++;}
+  if (longClic(3)) {day--;}
   if ((month == 4 || month == 6 || month == 9 || month == 11) && (day > 30)) day=0;
   if ((month == 4 || month == 6 || month == 9 || month == 11) && (day < 0)) day=30;
   if ((month == 1 || month == 3 || month == 5 || month == 7 || month == 9 || month == 11) && (day > 31)) day=0;
@@ -318,8 +346,8 @@ void handlingMonth()
 {
   bool isLeapYear = (year %4 == 0 && year %100 != 0) || (year %400 == 0);
 
-  if (longClic(2)) {month++; update=false;}
-  if (longClic(3)) {month--; update=false;}
+  if (longClic(2)) {month++;}
+  if (longClic(3)) {month--;}
   if (month>12) month=1;
   if (month<1) month=12;
 
@@ -339,13 +367,13 @@ void handlingMonth()
   u8g2.print(month);
 }
 
-/*------------------------Implementation des donnees (mois)-------------------------*/
+/*------------------------Implementation des donnees (annees)----------------------*/
 void handlingYear()
 {
   bool isLeapYear = (year %4 == 0 && year %100 != 0) || (year %400 == 0);
 
-  if (longClic(2)) {year++; update=false;}
-  if (longClic(3)) {year++; update=false;}
+  if (longClic(2)) {year++;}
+  if (longClic(3)) {year++;}
   if (year>99) year=0;
   if (year<0) year=99;
 
@@ -361,6 +389,20 @@ void handlingYear()
   u8g2.print(year);
 }
 
+/*------------------------Activation/Desactivation de l'alarme----------------------*/
+void switchAlarm()
+{
+  if (clic(2)) 
+  {
+    update = true;
+    alarm = !alarm;  // Utilisez l'opérateur d'affectation simple pour basculer l'état de l'alarme
+  }
+
+  u8g2.setCursor(0, 10);  // Positionne le curseur à la position (0, 10)
+  u8g2.print("Setting alarm");
+  u8g2.print(":");
+  u8g2.print(alarm ? " ON" : " OFF");  // Utilisez une condition ternaire pour afficher "ON" ou "OFF" en fonction de l'état
+}
 
 /*----------------------------------Temperature-------------------------------------*/
 float displaySensorTMP(int sample)
@@ -388,4 +430,45 @@ float displaySensorTMP(int sample)
   u8g2.print(" C");
 
   return degC;                                                  // Retourne la valeur moyenne de la temperature
+}
+
+/*---------------------------------URM37+Réveil-------------------------------------------*/
+void wakeUp()  
+{
+  if (alarm)
+  {
+    u8g2.setCursor(90, 55);
+    u8g2.print(hourUP < 10 ? "0" : "");
+    u8g2.print(hourUP);
+    u8g2.print(":");
+    u8g2.print(minuteUP < 10 ? "0" : "");
+    u8g2.print(minuteUP);
+
+    if ((second == 0) && (minute == minuteUP) && (hour == hourUP) || (UP == true))
+    {
+      UP = true;
+      tone(BUZZER, 600);
+      digitalWrite(URTRIG, LOW);
+      digitalWrite(URTRIG, HIGH);  
+
+      unsigned long LowLevelTime = pulseIn(URECHO, LOW) ;
+      DistanceMeasured = LowLevelTime / 50;
+      if (DistanceMeasured <= 10)
+      {
+        UP=false;
+        noTone(BUZZER);
+      }
+    }
+    else
+    {
+      UP = false;
+      noTone(BUZZER);
+      digitalWrite(URTRIG, LOW);
+    }
+  }
+  else
+  {
+    u8g2.setCursor(90, 55);
+    u8g2.print("OFF");
+  }
 }
